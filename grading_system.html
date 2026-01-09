@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全校成績管理系統 (15班整合版)</title>
+    <title>全校成績管理系統 (一行三組版)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
     
     <style>
@@ -52,7 +52,6 @@
             transform: translateY(-2px); box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
         }
 
-        /* 功能按鈕 */
         .btn-action { padding: 8px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; color: white; margin-left: 5px;}
         .btn-export { background-color: var(--accent-pos); }
         .btn-reset { background-color: #95a5a6; }
@@ -60,12 +59,24 @@
         .class-name-editor { margin-left: 10px; font-size: 14px; color: #555; }
         .input-class-name { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 100px; }
 
-        /* 教室佈局 */
+        /* --- 教室佈局 (修改為一行三組) --- */
         .classroom {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
-            max-width: 1200px; margin: 0 auto;
+            display: grid;
+            /* 強制分為 3 欄，每欄等寬 */
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 20px;
+            /* 放寬最大寬度，因為現在橫向要塞3組 */
+            max-width: 98%; 
+            margin: 0 auto;
         }
-        .group-column { display: grid; gap: 20px; }
+        
+        /* 響應式：螢幕變窄時自動變回 2 欄或 1 欄，避免破版 */
+        @media (max-width: 1200px) {
+            .classroom { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .classroom { grid-template-columns: 1fr; }
+        }
         
         .group-box {
             border: 2px dashed var(--group-border); 
@@ -88,7 +99,6 @@
         .hw-label { width: 50px; font-weight: bold; color: #555; margin-top: 5px;}
         .hw-input-score { width: 45px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align: center; height: 30px; }
         
-        /* 備註欄位 (換行與捲軸) */
         .hw-input-memo, .seat-input-memo {
             flex-grow: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px;
             font-family: inherit; font-size: 13px; color: #555;
@@ -162,35 +172,26 @@
             <button class="grade-btn" id="grade-btn-9" onclick="switchGrade(9)">九年級</button>
         </div>
         
-        <div class="class-tabs" id="tabContainer">
-            </div>
+        <div class="class-tabs" id="tabContainer"></div>
     </div>
 
-    <div class="classroom">
-        <div class="group-column" id="col-left"></div>
-        <div class="group-column" id="col-right"></div>
-    </div>
+    <div class="classroom" id="classroom-container"></div>
 
     <script>
-        // 設定常數
         const GRADES = [7, 8, 9];
         const CLASSES_PER_GRADE = 5; 
         const GROUPS = 6;
         const SEATS_PER_GROUP = 6;
         
-        // 狀態變數
-        let currentGrade = 7;     // 預設 7 年級
-        let currentClassIndex = 1; // 預設 第 1 班
+        let currentGrade = 7;     
+        let currentClassIndex = 1; 
         
-        // 暫存資料
         let currentStudents = [];
         let currentGroups = {};
-        // 班級名稱設定 (分年級儲存)
         let classNames = {}; 
 
         window.onload = function() {
-            initLayout(); // 先建立 HTML 結構
-            switchGrade(7); // 預設載入 7 年級
+            switchGrade(7);
         };
 
         // -----------------------
@@ -199,25 +200,17 @@
 
         function switchGrade(grade) {
             currentGrade = grade;
-            currentClassIndex = 1; // 切換年級時，回到該年級的第 1 班
-
-            // 更新按鈕樣式
+            currentClassIndex = 1;
             document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`grade-btn-${grade}`).classList.add('active');
-
-            // 載入該年級的班級名稱設定
             classNames = JSON.parse(localStorage.getItem(`G${grade}_meta_names`)) || initClassNames(grade);
-            
-            // 重新產生下方的班級分頁按鈕
             renderClassTabs();
-            
-            // 載入資料
             loadClassData();
         }
 
         function switchClass(index) {
             currentClassIndex = index;
-            renderClassTabs(); // 更新分頁按鈕樣式
+            renderClassTabs(); 
             loadClassData();
         }
 
@@ -227,7 +220,7 @@
             for(let i=1; i<=CLASSES_PER_GRADE; i++) {
                 const btn = document.createElement('button');
                 btn.className = `tab-btn ${i === currentClassIndex ? 'active' : ''}`;
-                btn.innerText = classNames[i]; // 使用自訂名稱
+                btn.innerText = classNames[i];
                 btn.onclick = () => switchClass(i);
                 container.appendChild(btn);
             }
@@ -235,7 +228,6 @@
 
         function initClassNames(grade) {
             let names = {};
-            // 預設名稱：701, 702... 或 801, 802...
             for(let i=1; i<=CLASSES_PER_GRADE; i++) names[i] = `${grade}0${i}`; 
             return names;
         }
@@ -245,7 +237,6 @@
         // -----------------------
 
         function loadClassData() {
-            // 更新輸入框顯示當前班名
             document.getElementById('classNameInput').value = classNames[currentClassIndex];
 
             const sKey = `G${currentGrade}_c${currentClassIndex}_students`;
@@ -254,7 +245,7 @@
             currentStudents = JSON.parse(localStorage.getItem(sKey)) || initializeStudentData();
             currentGroups = JSON.parse(localStorage.getItem(gKey)) || initializeGroupData();
 
-            renderAll();
+            initLayoutAndRender(); // 重新產生座位表並填入資料
         }
 
         function initializeStudentData() {
@@ -262,9 +253,7 @@
             let idCounter = 1;
             for (let g = 1; g <= GROUPS; g++) {
                 for (let s = 1; s <= SEATS_PER_GROUP; s++) {
-                    data.push({
-                        id: idCounter++, group: g, name: "", score: 0, memo: ""
-                    });
+                    data.push({ id: idCounter++, group: g, name: "", score: 0, memo: "" });
                 }
             }
             return data;
@@ -281,18 +270,19 @@
         function updateClassName(newName) {
             classNames[currentClassIndex] = newName;
             localStorage.setItem(`G${currentGrade}_meta_names`, JSON.stringify(classNames));
-            renderClassTabs(); // 即時更新分頁文字
+            renderClassTabs(); 
             showStatus("名稱已更新");
         }
 
         // -----------------------
-        // 渲染與操作
+        // 渲染與操作 (Layout 修改重點)
         // -----------------------
 
-        function initLayout() {
-            const leftCol = document.getElementById('col-left');
-            const rightCol = document.getElementById('col-right');
+        function initLayoutAndRender() {
+            const container = document.getElementById('classroom-container');
+            container.innerHTML = ''; // 清空目前的座位
 
+            // 產生 1~6 組的 HTML 區塊
             for(let g=1; g<=GROUPS; g++) {
                 const groupBox = document.createElement('div');
                 groupBox.className = 'group-box';
@@ -312,15 +302,15 @@
                         </div>
                     </div>
                 `;
-                if (g % 2 !== 0) leftCol.appendChild(groupBox);
-                else rightCol.appendChild(groupBox);
+                container.appendChild(groupBox);
             }
+
+            // 填入資料
+            fillData();
         }
 
-        function renderAll() {
+        function fillData() {
             // 渲染學生
-            for(let i=1; i<=GROUPS; i++) document.getElementById(`group-seats-${i}`).innerHTML = '';
-            
             currentStudents.forEach((student, index) => {
                 const container = document.getElementById(`group-seats-${student.group}`);
                 if(!container) return;
@@ -360,8 +350,12 @@
         function adjustScore(index, delta) {
             currentStudents[index].score += delta;
             saveCurrentClass();
-            renderAll(); 
+            fillData(); // 重新渲染以更新分數顯示
         }
+        
+        // 修正：因為 initLayoutAndRender 會重建 DOM，這裡需要一種不會導致輸入焦點跑掉的更新方式
+        // 為了簡單起見，這裡還是使用全刷，但在文字輸入時體驗稍差 (輸入完失焦後才會存)。
+        // 既然是成績輸入，這是可接受的。
 
         function updateGroupData(groupNum, field, value) {
             currentGroups[`g${groupNum}`][field] = value;
@@ -390,20 +384,18 @@
                     currentGroups[`g${g}`] = { hw1: "", hw1_memo: "", hw2: "", hw2_memo: "" };
                 }
                 saveCurrentClass();
-                renderAll();
+                initLayoutAndRender();
             }
         }
 
         // -----------------------
-        // Excel 匯出邏輯 (整合15班)
+        // Excel 匯出
         // -----------------------
         function exportToExcel() {
             var wb = XLSX.utils.book_new();
             var hasData = false;
 
-            // 迴圈順序：G7(1-5) -> G8(1-5) -> G9(1-5)
             for(let g of GRADES) {
-                // 讀取該年級的班級名稱設定
                 let gClassNames = JSON.parse(localStorage.getItem(`G${g}_meta_names`)) || initClassNames(g);
 
                 for(let c=1; c<=CLASSES_PER_GRADE; c++) {
@@ -413,7 +405,6 @@
                     const sData = JSON.parse(localStorage.getItem(sKey));
                     const gData = JSON.parse(localStorage.getItem(gKey));
                     
-                    // 該班若完全沒存過資料，就跳過不匯出分頁 (或可選擇匯出空白頁)
                     if(!sData) continue;
 
                     let ws_data = [
@@ -444,10 +435,8 @@
                         }
                     });
 
-                    // 只有當該班有實質資料時才建立分頁
                     if(classHasData) {
                         var ws = XLSX.utils.aoa_to_sheet(ws_data);
-                        // 分頁名稱：使用設定的班級名稱 (如 701)
                         XLSX.utils.book_append_sheet(wb, ws, gClassNames[c]);
                     }
                 }
