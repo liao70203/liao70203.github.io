@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全校成績管理系統 (15班整合版)</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --card-bg: #ffffff;
+            --primary: #2c3e50;
+            --grade-active: #2980b9;
+            --class-active: #3498db;
+            --accent-pos: #27ae60;
+            --accent-neg: #c0392b;
+            --group-border: #cbd5e0;
+        }
+
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-color); padding: 20px; }
+        
+        /* 頂部控制區 */
+        .top-bar {
+            background: var(--card-bg); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .system-title { font-weight: bold; font-size: 1.2em; color: var(--primary); margin-right: 20px;}
+
+        /* 第一層：年級選擇器 */
+        .grade-selector { display: flex; gap: 10px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .grade-btn {
+            padding: 8px 20px; border: 2px solid var(--grade-active); background: white;
+            color: var(--grade-active); font-weight: bold; border-radius: 20px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .grade-btn.active { background: var(--grade-active); color: white; }
+        .grade-btn:hover:not(.active) { background: #ecf0f1; }
+
+        /* 第二層：班級分頁按鈕 */
+        .class-tabs { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn {
+            padding: 8px 15px; border: 1px solid #ddd; background: #f8f9fa;
+            cursor: pointer; border-radius: 4px 4px 0 0; font-weight: bold; color: #555;
+            transition: all 0.2s; min-width: 80px;
+        }
+        .tab-btn.active {
+            background: var(--class-active); color: white; border-color: var(--class-active);
+            transform: translateY(-2px); box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* 功能按鈕 */
+        .btn-action { padding: 8px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; color: white; margin-left: 5px;}
+        .btn-export { background-color: var(--accent-pos); }
+        .btn-reset { background-color: #95a5a6; }
+
+        .class-name-editor { margin-left: 10px; font-size: 14px; color: #555; }
+        .input-class-name { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 100px; }
+
+        /* 教室佈局 */
+        .classroom {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+            max-width: 1200px; margin: 0 auto;
+        }
+        .group-column { display: grid; gap: 20px; }
+        
+        .group-box {
+            border: 2px dashed var(--group-border); 
+            border-radius: 10px; position: relative;
+            background: rgba(255, 255, 255, 0.5);
+            display: flex; flex-direction: column;
+        }
+        .group-header {
+            padding: 5px 10px; color: #7f8c8d; font-weight: bold; font-size: 0.9em;
+            background: var(--bg-color); width: fit-content; margin: -12px 0 5px 10px;
+        }
+
+        /* 作業區 */
+        .group-assignments {
+            margin-top: auto; padding: 10px; background-color: #eaeaea;
+            border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-size: 14px;
+        }
+        .hw-row { display: flex; align-items: start; gap: 8px; margin-bottom: 8px; }
+        .hw-row:last-child { margin-bottom: 0; }
+        .hw-label { width: 50px; font-weight: bold; color: #555; margin-top: 5px;}
+        .hw-input-score { width: 45px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align: center; height: 30px; }
+        
+        /* 備註欄位 (換行與捲軸) */
+        .hw-input-memo, .seat-input-memo {
+            flex-grow: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px;
+            font-family: inherit; font-size: 13px; color: #555;
+            resize: vertical; overflow-y: auto; line-height: 1.4;
+        }
+        .hw-input-memo { height: 32px; min-height: 32px; }
+
+        /* 座位與學生卡片 */
+        .seats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+        .student-card {
+            background: var(--card-bg); border: 1px solid #e0e0e0;
+            border-radius: 6px; padding: 10px; text-align: center;
+            display: flex; flex-direction: column; gap: 8px; transition: all 0.2s;
+        }
+        .student-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        .seat-input-name { 
+            width: 100%; border: none; border-bottom: 2px solid #eee; 
+            text-align: center; font-weight: bold; font-size: 16px; color: #333; padding-bottom: 2px;
+        }
+        .seat-input-memo {
+            width: 95%; margin: 0 auto; background: #fafafa;
+            height: 50px; text-align: left;
+        }
+        .seat-input-memo:focus { background: #fff; border-color: var(--class-active); outline: none; }
+        
+        .score-display { font-size: 28px; font-weight: bold; margin: 2px 0; }
+        .score-pos { color: var(--accent-pos); }
+        .score-neg { color: var(--accent-neg); }
+
+        .score-btn-group { display: flex; justify-content: center; gap: 10px; margin-top: 2px; }
+        .btn-score {
+            width: 32px; height: 32px; border: none; border-radius: 50%;
+            font-weight: bold; color: white; font-size: 20px; line-height: 1; 
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0.9;
+        }
+        .btn-score:hover { opacity: 1; transform: scale(1.1); }
+        .btn-plus { background-color: var(--accent-pos); }
+        .btn-minus { background-color: var(--accent-neg); }
+
+        .podium {
+            text-align: center; background: #333; color: white; padding: 10px;
+            margin-bottom: 20px; border-radius: 4px; letter-spacing: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="podium">講台</div>
+
+    <div class="top-bar">
+        <div class="header-row">
+            <div>
+                <span class="system-title">15班成績總管理</span>
+                <span class="class-name-editor">
+                    班級名稱：
+                    <input type="text" id="classNameInput" class="input-class-name" onchange="updateClassName(this.value)">
+                </span>
+            </div>
+            <div>
+                <span id="statusMsg" style="color: green; margin-right: 15px; font-size: 14px;"></span>
+                <button class="btn-action btn-reset" onclick="resetClass()">重置本班</button>
+                <button class="btn-action btn-export" onclick="exportToExcel()">匯出全校總表 (Excel)</button>
+            </div>
+        </div>
+
+        <div class="grade-selector">
+            <button class="grade-btn active" id="grade-btn-7" onclick="switchGrade(7)">七年級</button>
+            <button class="grade-btn" id="grade-btn-8" onclick="switchGrade(8)">八年級</button>
+            <button class="grade-btn" id="grade-btn-9" onclick="switchGrade(9)">九年級</button>
+        </div>
+        
+        <div class="class-tabs" id="tabContainer">
+            </div>
+    </div>
+
+    <div class="classroom">
+        <div class="group-column" id="col-left"></div>
+        <div class="group-column" id="col-right"></div>
+    </div>
+
+    <script>
+        // 設定常數
+        const GRADES = [7, 8, 9];
+        const CLASSES_PER_GRADE = 5; 
+        const GROUPS = 6;
+        const SEATS_PER_GROUP = 6;
+        
+        // 狀態變數
+        let currentGrade = 7;     // 預設 7 年級
+        let currentClassIndex = 1; // 預設 第 1 班
+        
+        // 暫存資料
+        let currentStudents = [];
+        let currentGroups = {};
+        // 班級名稱設定 (分年級儲存)
+        let classNames = {}; 
+
+        window.onload = function() {
+            initLayout(); // 先建立 HTML 結構
+            switchGrade(7); // 預設載入 7 年級
+        };
+
+        // -----------------------
+        // 導覽切換邏輯
+        // -----------------------
+
+        function switchGrade(grade) {
+            currentGrade = grade;
+            currentClassIndex = 1; // 切換年級時，回到該年級的第 1 班
+
+            // 更新按鈕樣式
+            document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`grade-btn-${grade}`).classList.add('active');
+
+            // 載入該年級的班級名稱設定
+            classNames = JSON.parse(localStorage.getItem(`G${grade}_meta_names`)) || initClassNames(grade);
+            
+            // 重新產生下方的班級分頁按鈕
+            renderClassTabs();
+            
+            // 載入資料
+            loadClassData();
+        }
+
+        function switchClass(index) {
+            currentClassIndex = index;
+            renderClassTabs(); // 更新分頁按鈕樣式
+            loadClassData();
+        }
+
+        function renderClassTabs() {
+            const container = document.getElementById('tabContainer');
+            container.innerHTML = '';
+            for(let i=1; i<=CLASSES_PER_GRADE; i++) {
+                const btn = document.createElement('button');
+                btn.className = `tab-btn ${i === currentClassIndex ? 'active' : ''}`;
+                btn.innerText = classNames[i]; // 使用自訂名稱
+                btn.onclick = () => switchClass(i);
+                container.appendChild(btn);
+            }
+        }
+
+        function initClassNames(grade) {
+            let names = {};
+            // 預設名稱：701, 702... 或 801, 802...
+            for(let i=1; i<=CLASSES_PER_GRADE; i++) names[i] = `${grade}0${i}`; 
+            return names;
+        }
+
+        // -----------------------
+        // 資料讀取與儲存
+        // -----------------------
+
+        function loadClassData() {
+            // 更新輸入框顯示當前班名
+            document.getElementById('classNameInput').value = classNames[currentClassIndex];
+
+            const sKey = `G${currentGrade}_c${currentClassIndex}_students`;
+            const gKey = `G${currentGrade}_c${currentClassIndex}_groups`;
+
+            currentStudents = JSON.parse(localStorage.getItem(sKey)) || initializeStudentData();
+            currentGroups = JSON.parse(localStorage.getItem(gKey)) || initializeGroupData();
+
+            renderAll();
+        }
+
+        function initializeStudentData() {
+            let data = [];
+            let idCounter = 1;
+            for (let g = 1; g <= GROUPS; g++) {
+                for (let s = 1; s <= SEATS_PER_GROUP; s++) {
+                    data.push({
+                        id: idCounter++, group: g, name: "", score: 0, memo: ""
+                    });
+                }
+            }
+            return data;
+        }
+
+        function initializeGroupData() {
+            let data = {};
+            for(let g=1; g<=GROUPS; g++) {
+                data[`g${g}`] = { hw1: "", hw1_memo: "", hw2: "", hw2_memo: "" };
+            }
+            return data;
+        }
+
+        function updateClassName(newName) {
+            classNames[currentClassIndex] = newName;
+            localStorage.setItem(`G${currentGrade}_meta_names`, JSON.stringify(classNames));
+            renderClassTabs(); // 即時更新分頁文字
+            showStatus("名稱已更新");
+        }
+
+        // -----------------------
+        // 渲染與操作
+        // -----------------------
+
+        function initLayout() {
+            const leftCol = document.getElementById('col-left');
+            const rightCol = document.getElementById('col-right');
+
+            for(let g=1; g<=GROUPS; g++) {
+                const groupBox = document.createElement('div');
+                groupBox.className = 'group-box';
+                groupBox.innerHTML = `
+                    <div class="group-header">第 ${g} 組</div>
+                    <div class="seats-grid" id="group-seats-${g}"></div>
+                    <div class="group-assignments">
+                        <div class="hw-row">
+                            <span class="hw-label">作業1</span>
+                            <input type="text" class="hw-input-score" id="g${g}-hw1" placeholder="分" onchange="updateGroupData(${g}, 'hw1', this.value)">
+                            <textarea class="hw-input-memo" id="g${g}-hw1-memo" placeholder="作業備註" onchange="updateGroupData(${g}, 'hw1_memo', this.value)"></textarea>
+                        </div>
+                        <div class="hw-row">
+                            <span class="hw-label">作業2</span>
+                            <input type="text" class="hw-input-score" id="g${g}-hw2" placeholder="分" onchange="updateGroupData(${g}, 'hw2', this.value)">
+                            <textarea class="hw-input-memo" id="g${g}-hw2-memo" placeholder="作業備註" onchange="updateGroupData(${g}, 'hw2_memo', this.value)"></textarea>
+                        </div>
+                    </div>
+                `;
+                if (g % 2 !== 0) leftCol.appendChild(groupBox);
+                else rightCol.appendChild(groupBox);
+            }
+        }
+
+        function renderAll() {
+            // 渲染學生
+            for(let i=1; i<=GROUPS; i++) document.getElementById(`group-seats-${i}`).innerHTML = '';
+            
+            currentStudents.forEach((student, index) => {
+                const container = document.getElementById(`group-seats-${student.group}`);
+                if(!container) return;
+
+                const score = student.score;
+                const scoreClass = score > 0 ? 'score-pos' : (score < 0 ? 'score-neg' : '');
+
+                const card = document.createElement('div');
+                card.className = 'student-card';
+                card.innerHTML = `
+                    <input type="text" class="seat-input-name" value="${student.name}" placeholder="姓名" onchange="updateStudentData(${index}, 'name', this.value)">
+                    <div class="score-display ${scoreClass}">${score > 0 ? '+' : ''}${score}</div>
+                    <div class="score-btn-group">
+                        <button class="btn-score btn-minus" onclick="adjustScore(${index}, -1)">-</button>
+                        <button class="btn-score btn-plus" onclick="adjustScore(${index}, 1)">+</button>
+                    </div>
+                    <textarea class="seat-input-memo" placeholder="個人備註" onchange="updateStudentData(${index}, 'memo', this.value)">${student.memo}</textarea>
+                `;
+                container.appendChild(card);
+            });
+
+            // 渲染小組作業
+            for(let g=1; g<=GROUPS; g++) {
+                const gData = currentGroups[`g${g}`];
+                document.getElementById(`g${g}-hw1`).value = gData.hw1 || "";
+                document.getElementById(`g${g}-hw1-memo`).value = gData.hw1_memo || "";
+                document.getElementById(`g${g}-hw2`).value = gData.hw2 || "";
+                document.getElementById(`g${g}-hw2-memo`).value = gData.hw2_memo || "";
+            }
+        }
+
+        function updateStudentData(index, field, value) {
+            currentStudents[index][field] = value;
+            saveCurrentClass();
+        }
+
+        function adjustScore(index, delta) {
+            currentStudents[index].score += delta;
+            saveCurrentClass();
+            renderAll(); 
+        }
+
+        function updateGroupData(groupNum, field, value) {
+            currentGroups[`g${groupNum}`][field] = value;
+            saveCurrentClass();
+        }
+
+        function saveCurrentClass() {
+            const sKey = `G${currentGrade}_c${currentClassIndex}_students`;
+            const gKey = `G${currentGrade}_c${currentClassIndex}_groups`;
+            localStorage.setItem(sKey, JSON.stringify(currentStudents));
+            localStorage.setItem(gKey, JSON.stringify(currentGroups));
+            showStatus("已儲存");
+        }
+
+        function showStatus(text) {
+            const msg = document.getElementById('statusMsg');
+            msg.innerText = text;
+            setTimeout(() => msg.innerText = "", 1000);
+        }
+
+        function resetClass() {
+            const cName = classNames[currentClassIndex];
+            if(confirm(`確定要重置 [${cName}] 的所有分數嗎？`)) {
+                currentStudents.forEach(s => { s.score = 0; s.memo = ""; });
+                for(let g=1; g<=GROUPS; g++) {
+                    currentGroups[`g${g}`] = { hw1: "", hw1_memo: "", hw2: "", hw2_memo: "" };
+                }
+                saveCurrentClass();
+                renderAll();
+            }
+        }
+
+        // -----------------------
+        // Excel 匯出邏輯 (整合15班)
+        // -----------------------
+        function exportToExcel() {
+            var wb = XLSX.utils.book_new();
+            var hasData = false;
+
+            // 迴圈順序：G7(1-5) -> G8(1-5) -> G9(1-5)
+            for(let g of GRADES) {
+                // 讀取該年級的班級名稱設定
+                let gClassNames = JSON.parse(localStorage.getItem(`G${g}_meta_names`)) || initClassNames(g);
+
+                for(let c=1; c<=CLASSES_PER_GRADE; c++) {
+                    const sKey = `G${g}_c${c}_students`;
+                    const gKey = `G${g}_c${c}_groups`;
+                    
+                    const sData = JSON.parse(localStorage.getItem(sKey));
+                    const gData = JSON.parse(localStorage.getItem(gKey));
+                    
+                    // 該班若完全沒存過資料，就跳過不匯出分頁 (或可選擇匯出空白頁)
+                    if(!sData) continue;
+
+                    let ws_data = [
+                        ["組別", "姓名", "個人平時加減", "個人備註", "小組作業1", "作業1備註", "小組作業2", "作業2備註", "參考總分"]
+                    ];
+
+                    let classHasData = false;
+                    sData.forEach(s => {
+                        if(s.name.trim() !== "" || s.score !== 0) {
+                            classHasData = true;
+                            hasData = true;
+                            let gInfo = gData[`g${s.group}`];
+                            let hw1 = parseFloat(gInfo.hw1) || 0;
+                            let hw2 = parseFloat(gInfo.hw2) || 0;
+                            let total = s.score + hw1 + hw2;
+
+                            ws_data.push([
+                                s.group,
+                                s.name,
+                                s.score,
+                                s.memo,
+                                gInfo.hw1,
+                                gInfo.hw1_memo,
+                                gInfo.hw2,
+                                gInfo.hw2_memo,
+                                total
+                            ]);
+                        }
+                    });
+
+                    // 只有當該班有實質資料時才建立分頁
+                    if(classHasData) {
+                        var ws = XLSX.utils.aoa_to_sheet(ws_data);
+                        // 分頁名稱：使用設定的班級名稱 (如 701)
+                        XLSX.utils.book_append_sheet(wb, ws, gClassNames[c]);
+                    }
+                }
+            }
+
+            if(hasData) {
+                XLSX.writeFile(wb, "全校學期成績總表.xlsx");
+            } else {
+                alert("目前系統內沒有任何有效的成績資料。");
+            }
+        }
+    </script>
+</body>
+</html>
