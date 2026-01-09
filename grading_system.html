@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全校成績管理系統 (一行三組版)</title>
+    <title>全校成績管理系統 (固定版型)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
     
     <style>
@@ -25,6 +25,7 @@
             background: var(--card-bg); padding: 15px; border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
             position: sticky; top: 0; z-index: 100;
+            min-width: 800px; /* 防止控制列在小螢幕太擠 */
         }
 
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -35,7 +36,7 @@
         .grade-btn {
             padding: 8px 20px; border: 2px solid var(--grade-active); background: white;
             color: var(--grade-active); font-weight: bold; border-radius: 20px; cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s; white-space: nowrap;
         }
         .grade-btn.active { background: var(--grade-active); color: white; }
         .grade-btn:hover:not(.active) { background: #ecf0f1; }
@@ -45,37 +46,31 @@
         .tab-btn {
             padding: 8px 15px; border: 1px solid #ddd; background: #f8f9fa;
             cursor: pointer; border-radius: 4px 4px 0 0; font-weight: bold; color: #555;
-            transition: all 0.2s; min-width: 80px;
+            transition: all 0.2s; min-width: 80px; white-space: nowrap;
         }
         .tab-btn.active {
             background: var(--class-active); color: white; border-color: var(--class-active);
             transform: translateY(-2px); box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
         }
 
-        .btn-action { padding: 8px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; color: white; margin-left: 5px;}
+        .btn-action { padding: 8px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; color: white; margin-left: 5px; white-space: nowrap;}
         .btn-export { background-color: var(--accent-pos); }
         .btn-reset { background-color: #95a5a6; }
 
         .class-name-editor { margin-left: 10px; font-size: 14px; color: #555; }
         .input-class-name { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 100px; }
 
-        /* --- 教室佈局 (修改為一行三組) --- */
+        /* --- 教室佈局 (強制固定版型) --- */
         .classroom {
             display: grid;
             /* 強制分為 3 欄，每欄等寬 */
             grid-template-columns: repeat(3, 1fr); 
             gap: 20px;
-            /* 放寬最大寬度，因為現在橫向要塞3組 */
-            max-width: 98%; 
             margin: 0 auto;
-        }
-        
-        /* 響應式：螢幕變窄時自動變回 2 欄或 1 欄，避免破版 */
-        @media (max-width: 1200px) {
-            .classroom { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 768px) {
-            .classroom { grid-template-columns: 1fr; }
+            
+            /* 關鍵：設定最小寬度，強制瀏覽器即使在手機上也要畫出這麼寬的表格 */
+            min-width: 1100px; 
+            overflow-x: auto; /* 允許橫向滾動 */
         }
         
         .group-box {
@@ -245,7 +240,7 @@
             currentStudents = JSON.parse(localStorage.getItem(sKey)) || initializeStudentData();
             currentGroups = JSON.parse(localStorage.getItem(gKey)) || initializeGroupData();
 
-            initLayoutAndRender(); // 重新產生座位表並填入資料
+            initLayoutAndRender(); 
         }
 
         function initializeStudentData() {
@@ -275,19 +270,18 @@
         }
 
         // -----------------------
-        // 渲染與操作 (Layout 修改重點)
+        // 渲染與操作
         // -----------------------
 
         function initLayoutAndRender() {
             const container = document.getElementById('classroom-container');
-            container.innerHTML = ''; // 清空目前的座位
+            container.innerHTML = ''; 
 
-            // 產生 1~6 組的 HTML 區塊
             for(let g=1; g<=GROUPS; g++) {
                 const groupBox = document.createElement('div');
                 groupBox.className = 'group-box';
                 groupBox.innerHTML = `
-                    <div class="group-header">第 ${g} 組</div>
+                    
                     <div class="seats-grid" id="group-seats-${g}"></div>
                     <div class="group-assignments">
                         <div class="hw-row">
@@ -305,12 +299,10 @@
                 container.appendChild(groupBox);
             }
 
-            // 填入資料
             fillData();
         }
 
         function fillData() {
-            // 渲染學生
             currentStudents.forEach((student, index) => {
                 const container = document.getElementById(`group-seats-${student.group}`);
                 if(!container) return;
@@ -332,7 +324,6 @@
                 container.appendChild(card);
             });
 
-            // 渲染小組作業
             for(let g=1; g<=GROUPS; g++) {
                 const gData = currentGroups[`g${g}`];
                 document.getElementById(`g${g}-hw1`).value = gData.hw1 || "";
@@ -350,13 +341,9 @@
         function adjustScore(index, delta) {
             currentStudents[index].score += delta;
             saveCurrentClass();
-            fillData(); // 重新渲染以更新分數顯示
+            fillData(); 
         }
         
-        // 修正：因為 initLayoutAndRender 會重建 DOM，這裡需要一種不會導致輸入焦點跑掉的更新方式
-        // 為了簡單起見，這裡還是使用全刷，但在文字輸入時體驗稍差 (輸入完失焦後才會存)。
-        // 既然是成績輸入，這是可接受的。
-
         function updateGroupData(groupNum, field, value) {
             currentGroups[`g${groupNum}`][field] = value;
             saveCurrentClass();
