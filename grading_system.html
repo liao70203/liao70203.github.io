@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全校成績管理系統 (固定版型)</title>
+    <title>全校成績管理系統 (修正版)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
     
     <style>
@@ -16,6 +16,11 @@
             --accent-pos: #27ae60;
             --accent-neg: #c0392b;
             --group-border: #cbd5e0;
+            /* 上下排背景色區分 */
+            --row-top-bg: #f0f7ff;  /* 上排極淺藍 */
+            --row-top-border: #cce5ff;
+            --row-bottom-bg: #fffaf0; /* 下排極淺橘 */
+            --row-bottom-border: #ffe8cc;
         }
 
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-color); padding: 20px; }
@@ -25,7 +30,7 @@
             background: var(--card-bg); padding: 15px; border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
             position: sticky; top: 0; z-index: 100;
-            min-width: 800px; /* 防止控制列在小螢幕太擠 */
+            min-width: 800px;
         }
 
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -60,34 +65,45 @@
         .class-name-editor { margin-left: 10px; font-size: 14px; color: #555; }
         .input-class-name { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 100px; }
 
-        /* --- 教室佈局 (強制固定版型) --- */
+        /* --- 教室佈局 --- */
         .classroom {
             display: grid;
-            /* 強制分為 3 欄，每欄等寬 */
             grid-template-columns: repeat(3, 1fr); 
             gap: 20px;
             margin: 0 auto;
-            
-            /* 關鍵：設定最小寬度，強制瀏覽器即使在手機上也要畫出這麼寬的表格 */
             min-width: 1100px; 
-            overflow-x: auto; /* 允許橫向滾動 */
+            overflow-x: auto;
+            padding-bottom: 20px; 
         }
         
         .group-box {
-            border: 2px dashed var(--group-border); 
-            border-radius: 10px; position: relative;
-            background: rgba(255, 255, 255, 0.5);
+            border: 2px solid var(--group-border); 
+            border-radius: 8px; position: relative;
             display: flex; flex-direction: column;
+            overflow: hidden; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
+
+        .group-box.row-top {
+            background-color: var(--row-top-bg);
+            border-color: var(--row-top-border);
+        }
+        .group-box.row-bottom {
+            background-color: var(--row-bottom-bg);
+            border-color: var(--row-bottom-border);
+        }
+
+        /* 裝飾條 (無文字) */
         .group-header {
-            padding: 5px 10px; color: #7f8c8d; font-weight: bold; font-size: 0.9em;
-            background: var(--bg-color); width: fit-content; margin: -12px 0 5px 10px;
+            height: 6px; 
+            width: 100%;
+            background: rgba(0,0,0,0.1); 
         }
 
         /* 作業區 */
         .group-assignments {
-            margin-top: auto; padding: 10px; background-color: #eaeaea;
-            border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-size: 14px;
+            margin-top: auto; padding: 10px; background-color: rgba(0,0,0,0.05); 
+            font-size: 14px; border-top: 1px solid rgba(0,0,0,0.1);
         }
         .hw-row { display: flex; align-items: start; gap: 8px; margin-bottom: 8px; }
         .hw-row:last-child { margin-bottom: 0; }
@@ -278,10 +294,12 @@
             container.innerHTML = ''; 
 
             for(let g=1; g<=GROUPS; g++) {
+                let rowClass = (g <= 3) ? 'row-top' : 'row-bottom';
                 const groupBox = document.createElement('div');
-                groupBox.className = 'group-box';
+                groupBox.className = `group-box ${rowClass}`;
+                
                 groupBox.innerHTML = `
-                    
+                    <div class="group-header"></div>
                     <div class="seats-grid" id="group-seats-${g}"></div>
                     <div class="group-assignments">
                         <div class="hw-row">
@@ -303,6 +321,12 @@
         }
 
         function fillData() {
+            // 【重要修正】：先清空座位區，避免重複疊加！
+            for(let g=1; g<=GROUPS; g++) {
+                const container = document.getElementById(`group-seats-${g}`);
+                if(container) container.innerHTML = '';
+            }
+
             currentStudents.forEach((student, index) => {
                 const container = document.getElementById(`group-seats-${student.group}`);
                 if(!container) return;
@@ -341,7 +365,7 @@
         function adjustScore(index, delta) {
             currentStudents[index].score += delta;
             saveCurrentClass();
-            fillData(); 
+            fillData(); // 重新渲染，現在因為有清空所以不會重複了
         }
         
         function updateGroupData(groupNum, field, value) {
@@ -371,7 +395,7 @@
                     currentGroups[`g${g}`] = { hw1: "", hw1_memo: "", hw2: "", hw2_memo: "" };
                 }
                 saveCurrentClass();
-                initLayoutAndRender();
+                fillData();
             }
         }
 
