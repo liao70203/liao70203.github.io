@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全校成績管理系統 (修正版)</title>
+    <title>全校成績管理系統 (含班級備忘錄)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
     
     <style>
@@ -16,11 +16,16 @@
             --accent-pos: #27ae60;
             --accent-neg: #c0392b;
             --group-border: #cbd5e0;
+            
             /* 上下排背景色區分 */
-            --row-top-bg: #f0f7ff;  /* 上排極淺藍 */
+            --row-top-bg: #f0f7ff;
             --row-top-border: #cce5ff;
-            --row-bottom-bg: #fffaf0; /* 下排極淺橘 */
+            --row-bottom-bg: #fffaf0;
             --row-bottom-border: #ffe8cc;
+
+            /* 備忘錄樣式 */
+            --memo-bg: #fffbe6;
+            --memo-border: #ffe58f;
         }
 
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-color); padding: 20px; }
@@ -65,6 +70,26 @@
         .class-name-editor { margin-left: 10px; font-size: 14px; color: #555; }
         .input-class-name { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 100px; }
 
+        /* --- 新增：班級備忘錄區塊 --- */
+        .class-memo-section {
+            max-width: 1100px; margin: 0 auto 20px auto;
+            background-color: var(--memo-bg);
+            border: 1px solid var(--memo-border);
+            border-radius: 8px; padding: 10px 15px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .memo-label {
+            font-weight: bold; color: #d48806; font-size: 14px; margin-bottom: 5px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .class-memo-input {
+            width: 98%; height: 50px; border: 1px solid #e0d0a0; border-radius: 4px;
+            padding: 8px; font-size: 14px; resize: vertical; outline: none;
+            background: rgba(255,255,255,0.7);
+        }
+        .class-memo-input:focus { background: #fff; border-color: #d48806; }
+
         /* --- 教室佈局 --- */
         .classroom {
             display: grid;
@@ -93,12 +118,7 @@
             border-color: var(--row-bottom-border);
         }
 
-        /* 裝飾條 (無文字) */
-        .group-header {
-            height: 6px; 
-            width: 100%;
-            background: rgba(0,0,0,0.1); 
-        }
+        .group-header { height: 6px; width: 100%; background: rgba(0,0,0,0.1); }
 
         /* 作業區 */
         .group-assignments {
@@ -186,6 +206,13 @@
         <div class="class-tabs" id="tabContainer"></div>
     </div>
 
+    <div class="class-memo-section">
+        <div class="memo-label">📝 本班待辦事項 / 重要備註：</div>
+        <textarea id="classMemoInput" class="class-memo-input" 
+            placeholder="例如：下週二收校外教學回條、班長提醒..." 
+            onchange="updateClassMemo(this.value)"></textarea>
+    </div>
+
     <div class="classroom" id="classroom-container"></div>
 
     <script>
@@ -200,14 +227,12 @@
         let currentStudents = [];
         let currentGroups = {};
         let classNames = {}; 
+        // 暫存備忘錄
+        let currentClassMemo = "";
 
         window.onload = function() {
             switchGrade(7);
         };
-
-        // -----------------------
-        // 導覽切換邏輯
-        // -----------------------
 
         function switchGrade(grade) {
             currentGrade = grade;
@@ -243,18 +268,20 @@
             return names;
         }
 
-        // -----------------------
-        // 資料讀取與儲存
-        // -----------------------
-
         function loadClassData() {
             document.getElementById('classNameInput').value = classNames[currentClassIndex];
 
             const sKey = `G${currentGrade}_c${currentClassIndex}_students`;
             const gKey = `G${currentGrade}_c${currentClassIndex}_groups`;
+            // 讀取備忘錄
+            const mKey = `G${currentGrade}_c${currentClassIndex}_class_memo`;
 
             currentStudents = JSON.parse(localStorage.getItem(sKey)) || initializeStudentData();
             currentGroups = JSON.parse(localStorage.getItem(gKey)) || initializeGroupData();
+            currentClassMemo = localStorage.getItem(mKey) || "";
+
+            // 更新備忘錄顯示
+            document.getElementById('classMemoInput').value = currentClassMemo;
 
             initLayoutAndRender(); 
         }
@@ -285,9 +312,13 @@
             showStatus("名稱已更新");
         }
 
-        // -----------------------
-        // 渲染與操作
-        // -----------------------
+        // --- 新增：更新班級備忘錄 ---
+        function updateClassMemo(val) {
+            currentClassMemo = val;
+            const mKey = `G${currentGrade}_c${currentClassIndex}_class_memo`;
+            localStorage.setItem(mKey, currentClassMemo);
+            showStatus("備忘錄已儲存");
+        }
 
         function initLayoutAndRender() {
             const container = document.getElementById('classroom-container');
@@ -321,7 +352,6 @@
         }
 
         function fillData() {
-            // 【重要修正】：先清空座位區，避免重複疊加！
             for(let g=1; g<=GROUPS; g++) {
                 const container = document.getElementById(`group-seats-${g}`);
                 if(container) container.innerHTML = '';
@@ -365,7 +395,7 @@
         function adjustScore(index, delta) {
             currentStudents[index].score += delta;
             saveCurrentClass();
-            fillData(); // 重新渲染，現在因為有清空所以不會重複了
+            fillData(); 
         }
         
         function updateGroupData(groupNum, field, value) {
@@ -389,19 +419,19 @@
 
         function resetClass() {
             const cName = classNames[currentClassIndex];
-            if(confirm(`確定要重置 [${cName}] 的所有分數嗎？`)) {
+            if(confirm(`確定要重置 [${cName}] 的所有分數嗎？\n(注意：這也會清空下方的班級備忘錄)`)) {
                 currentStudents.forEach(s => { s.score = 0; s.memo = ""; });
                 for(let g=1; g<=GROUPS; g++) {
                     currentGroups[`g${g}`] = { hw1: "", hw1_memo: "", hw2: "", hw2_memo: "" };
                 }
+                updateClassMemo(""); // 清空備忘錄
+                document.getElementById('classMemoInput').value = ""; // 清空畫面
+
                 saveCurrentClass();
                 fillData();
             }
         }
 
-        // -----------------------
-        // Excel 匯出
-        // -----------------------
         function exportToExcel() {
             var wb = XLSX.utils.book_new();
             var hasData = false;
