@@ -21,25 +21,37 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg-color); padding: 15px; margin: 0; }
         input, textarea, select { font-size: 16px !important; }
 
-        /* --- 頂部控制列 --- */
+        /* --- 版面容器 (修正排版跑掉的問題) --- */
+        .main-wrapper {
+            max-width: 1200px; /* 限制最大寬度，讓所有元素對齊 */
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* 頂部控制列 */
         .top-bar { 
             background: var(--card-bg); padding: 10px; border-radius: 8px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; 
-            position: sticky; top: 0; z-index: 100; 
-            /* 移除最小寬度，改用響應式 */
-            width: 100%; max-width: 100%; overflow-x: auto;
+            position: sticky; top: 0; z-index: 100; width: 100%;
         }
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;}
         .system-title { font-weight: bold; font-size: 1.1em; color: var(--primary); margin-right: 10px; white-space: nowrap;}
         
-        .grade-selector { display: flex; gap: 5px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #eee; overflow-x: auto;}
+        .grade-selector { display: flex; gap: 5px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #eee; overflow-x: auto;}
         .grade-btn { padding: 6px 15px; border: 2px solid var(--grade-active); background: white; color: var(--grade-active); font-weight: bold; border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 14px;}
         .grade-btn.active { background: var(--grade-active); color: white; }
         
-        .class-tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+        /* 班級分頁區 (含新增刪除按鈕) */
+        .tabs-container { display: flex; align-items: center; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
+        .class-tabs { display: flex; gap: 4px; flex-grow: 1; }
         .tab-btn { padding: 6px 12px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; border-radius: 4px 4px 0 0; font-weight: bold; color: #555; min-width: 60px; white-space: nowrap; font-size: 14px;}
         .tab-btn.active { background: var(--class-active); color: white; border-color: var(--class-active); }
         
+        /* 班級管理按鈕 */
+        .btn-manage-class { width: 30px; height: 30px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .btn-add-class { background: #2ecc71; color: white; }
+        .btn-del-class { background: #e74c3c; color: white; margin-left: auto;} /* 靠右 */
+
         .btn-action { padding: 6px 12px; font-size: 13px; cursor: pointer; border: none; border-radius: 4px; color: white; margin-left: 3px; white-space: nowrap;}
         .btn-export { background-color: var(--accent-pos); } 
         .btn-reset { background-color: #95a5a6; }
@@ -47,26 +59,23 @@
         .class-name-editor { font-size: 13px; color: #555; display: flex; align-items: center;}
         .input-class-name { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 90px; margin-left: 5px;}
         
+        /* 講台 */
+        .podium { 
+            text-align: center; background: #333; color: white; padding: 8px; 
+            margin-bottom: 15px; border-radius: 4px; letter-spacing: 5px; 
+            font-size: 14px; width: 100%;
+        }
+
         .class-memo-section { width: 100%; margin: 0 auto 15px auto; background-color: var(--memo-bg); border: 1px solid var(--memo-border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; }
         .class-memo-input { width: 100%; height: 40px; border: 1px solid #e0d0a0; border-radius: 4px; padding: 5px; font-size: 14px; resize: vertical; outline: none; background: rgba(255,255,255,0.7); }
         
-        /* --- 教室佈局 (RWD優化) --- */
+        /* 教室佈局 */
         .classroom { 
-            display: grid; 
-            /* 使用 minmax 讓格子有彈性，但在手機上自動變少欄 */
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 10px; 
-            width: 100%; 
-            padding-bottom: 40px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; 
+            width: 100%; padding-bottom: 40px;
         }
-        /* 平板直立或手機橫放時 */
-        @media (max-width: 900px) {
-            .classroom { grid-template-columns: repeat(2, 1fr); }
-        }
-        /* 手機直立時 */
-        @media (max-width: 500px) {
-            .classroom { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 900px) { .classroom { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 500px) { .classroom { grid-template-columns: 1fr; } }
         
         .group-box { border: 2px solid var(--group-border); border-radius: 8px; position: relative; display: flex; flex-direction: column; overflow: visible; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .group-box.row-top { background-color: var(--row-top-bg); border-color: var(--row-top-border); }
@@ -81,66 +90,28 @@
         .hw-input-memo { flex-grow: 1; padding: 3px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 13px; color: #555; resize: vertical; overflow-y: auto; line-height: 1.4; -webkit-appearance: none; height: 28px; min-height: 28px; }
         
         .seats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; min-height: 80px; }
+        .student-card { background: var(--card-bg); border: 1px solid #e0e0e0; border-radius: 8px; padding: 6px; text-align: center; display: flex; flex-direction: column; gap: 3px; transition: all 0.2s; position: relative; }
         
-        /* --- 學生卡片 (緊湊設計) --- */
-        .student-card { 
-            background: var(--card-bg); border: 1px solid #e0e0e0; border-radius: 8px; 
-            padding: 6px; text-align: center; display: flex; flex-direction: column; gap: 3px; 
-            transition: all 0.2s; position: relative; 
-        }
-        
-        .move-handle {
-            position: absolute; top: 0px; left: 0px; width: 25px; height: 25px; 
-            border-radius: 8px 0 8px 0; color: #ccc; font-size: 16px; line-height: 24px;
-            cursor: grab; z-index: 15; user-select: none; display: flex; align-items: center; justify-content: center;
-        }
+        .move-handle { position: absolute; top: 0px; left: 0px; width: 25px; height: 25px; border-radius: 8px 0 8px 0; color: #ccc; font-size: 16px; line-height: 24px; cursor: grab; z-index: 15; user-select: none; display: flex; align-items: center; justify-content: center; }
         .move-handle::after { content: '⠿'; } 
 
-        /* 圖片放大 */
-        .photo-container { 
-            width: 85px; height: 85px; /* 放大到 85px */
-            margin: 0 auto; position: relative; cursor: pointer; 
-        }
+        .photo-container { width: 85px; height: 85px; margin: 0 auto; position: relative; cursor: pointer; }
         .student-photo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; background: #eee; }
         .photo-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #999; font-size: 24px; pointer-events: none; }
         .hidden-file-input { display: none; }
         
-        .seat-input-name { 
-            width: 100%; height: 26px; border: none; border-bottom: 1px solid #eee; 
-            text-align: center; font-weight: bold; color: #333; background: transparent; 
-            padding: 0; border-radius: 0; font-size: 16px !important; margin-top: 5px;
-        }
-        .seat-input-zhuyin { 
-            width: 100%; border: none; background: transparent; text-align: center; 
-            font-size: 12px !important; color: #999; padding: 0; margin-bottom: 2px;
-        }
+        .seat-input-name { width: 100%; height: 26px; border: none; border-bottom: 1px solid #eee; text-align: center; font-weight: bold; color: #333; background: transparent; padding: 0; border-radius: 0; font-size: 16px !important; margin-top: 5px; }
+        .seat-input-zhuyin { width: 100%; border: none; background: transparent; text-align: center; font-size: 12px !important; color: #999; padding: 0; margin-bottom: 2px; }
         
-        /* --- 分數控制列 (左右排列) --- */
-        .score-control-row {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            margin: 2px 0;
-        }
-        .score-display { 
-            font-size: 20px; /* 縮小字體 */
-            font-weight: bold; min-width: 35px;
-        }
+        .score-control-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0; }
+        .score-display { font-size: 20px; font-weight: bold; min-width: 35px; }
         .score-pos { color: var(--accent-pos); } .score-neg { color: var(--accent-neg); } .score-base { color: #333; }
         
-        .btn-score { 
-            width: 30px; height: 30px; border: none; border-radius: 50%; 
-            font-weight: bold; color: white; font-size: 16px; 
-            display: flex; align-items: center; justify-content: center; 
-            cursor: pointer; opacity: 0.9; padding: 0;
-        }
-        .btn-plus { background-color: var(--accent-pos); } 
-        .btn-minus { background-color: var(--accent-neg); }
+        .btn-score { width: 30px; height: 30px; border: none; border-radius: 50%; font-weight: bold; color: white; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.9; padding: 0; }
+        .btn-plus { background-color: var(--accent-pos); } .btn-minus { background-color: var(--accent-neg); }
         .btn-score:active { transform: scale(0.9); }
 
-        .seat-input-memo { 
-            width: 100%; background: #fafafa; height: 35px; text-align: left; 
-            -webkit-appearance: none; border: 1px solid #eee; border-radius: 4px; 
-            font-size: 13px !important; padding: 2px;
-        }
+        .seat-input-memo { width: 100%; background: #fafafa; height: 35px; text-align: left; -webkit-appearance: none; border: 1px solid #eee; border-radius: 4px; font-size: 13px !important; padding: 2px; }
         
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 999; display: flex; justify-content: center; align-items: center; font-size: 20px; color: var(--primary); font-weight: bold; }
         .photo-delete-btn { position: absolute; top: -2px; right: -5px; width: 22px; height: 22px; background-color: #e74c3c; color: white; border-radius: 50%; font-size: 16px; line-height: 20px; text-align: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: bold; border: 2px solid #fff; }
@@ -155,45 +126,51 @@
 
     <div id="loading-overlay">正在雲端同步資料...</div>
 
-    <div class="podium">講台</div>
-
-    <div class="top-bar">
-        <div class="header-row">
-            <div>
-                <span class="system-title">全校成績管理</span>
-                <span class="class-name-editor">
-                    班級：
-                    <input type="text" id="classNameInput" class="input-class-name" onchange="updateClassName(this.value)">
-                </span>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span id="statusMsg" style="color: green; margin-right: 10px; font-size: 12px;"></span>
-                <button class="btn-action btn-reset" onclick="resetClass()">重置</button>
-                <button class="btn-action btn-export" onclick="exportToExcel()">匯出</button>
-            </div>
-        </div>
-
-        <div class="grade-selector">
-            <button class="grade-btn active" id="grade-btn-7" onclick="switchGrade(7)">七年級</button>
-            <button class="grade-btn" id="grade-btn-8" onclick="switchGrade(8)">八年級</button>
-            <button class="grade-btn" id="grade-btn-9" onclick="switchGrade(9)">九年級</button>
-        </div>
+    <div class="main-wrapper">
         
-        <div class="class-tabs" id="tabContainer"></div>
-    </div>
+        <div class="top-bar">
+            <div class="header-row">
+                <div>
+                    <span class="system-title">全校成績</span>
+                    <span class="class-name-editor">
+                        班級：
+                        <input type="text" id="classNameInput" class="input-class-name" onchange="updateClassName(this.value)">
+                    </span>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <span id="statusMsg" style="color: green; margin-right: 10px; font-size: 12px;"></span>
+                    <button class="btn-action btn-reset" onclick="resetClass()">重置</button>
+                    <button class="btn-action btn-export" onclick="exportToExcel()">匯出</button>
+                </div>
+            </div>
 
-    <div class="class-memo-section">
-        <div class="memo-label">📝 備忘錄：</div>
-        <textarea id="classMemoInput" class="class-memo-input" 
-            placeholder="點擊手把拖曳座位，點擊圖片上傳..." 
-            onchange="updateClassMemo(this.value)"></textarea>
-    </div>
+            <div class="grade-selector">
+                <button class="grade-btn active" id="grade-btn-7" onclick="switchGrade(7)">七年級</button>
+                <button class="grade-btn" id="grade-btn-8" onclick="switchGrade(8)">八年級</button>
+                <button class="grade-btn" id="grade-btn-9" onclick="switchGrade(9)">九年級</button>
+            </div>
+            
+            <div class="tabs-container">
+                <div class="class-tabs" id="tabContainer"></div>
+                <button class="btn-manage-class btn-add-class" onclick="addNewClass()" title="新增班級">+</button>
+                <button class="btn-manage-class btn-del-class" onclick="deleteCurrentClass()" title="刪除本班">🗑️</button>
+            </div>
+        </div>
 
-    <div class="classroom" id="classroom-container"></div>
+        <div class="podium">講台</div>
+
+        <div class="class-memo-section">
+            <div class="memo-label">📝 備忘錄：</div>
+            <textarea id="classMemoInput" class="class-memo-input" 
+                placeholder="點擊手把拖曳座位，點擊圖片上傳..." 
+                onchange="updateClassMemo(this.value)"></textarea>
+        </div>
+
+        <div class="classroom" id="classroom-container"></div>
+    </div>
 
     <script>
         const GRADES = [7, 8, 9];
-        const CLASSES_PER_GRADE = 5; 
         const GROUPS = 6;
         const SEATS_PER_GROUP = 6;
         const DEFAULT_SCORE = 80; 
@@ -207,6 +184,10 @@
         let classNames = {}; 
         let currentClassMemo = "";
         
+        // 紀錄每個年級的班級列表 (ID 陣列)
+        // 預設結構: { 7: [1,2,3,4,5], 8: [...], 9: [...] }
+        let gradeClassesConfig = {};
+
         let sortableInstances = [];
 
         window.onload = async function() {
@@ -226,10 +207,26 @@
                 const response = await fetch(API_URL);
                 cloudData = await response.json();
                 console.log("雲端資料下載完成");
+                
+                // 初始化班級設定
+                initGradeConfig();
             } catch (e) {
                 alert("連線失敗：" + e);
             }
             showLoading(false);
+        }
+
+        // 初始化班級列表設定 (如果雲端沒有，就用預設 1~5)
+        function initGradeConfig() {
+            if (cloudData["GLOBAL_grade_config"]) {
+                gradeClassesConfig = JSON.parse(cloudData["GLOBAL_grade_config"]);
+            } else {
+                // 預設每個年級 5 班
+                gradeClassesConfig = {};
+                GRADES.forEach(g => {
+                    gradeClassesConfig[g] = [1, 2, 3, 4, 5];
+                });
+            }
         }
 
         async function syncDataToCloud(key, value) {
@@ -254,10 +251,57 @@
             document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
         }
 
+        // --- 班級管理 (新增/刪除) ---
+        function addNewClass() {
+            let list = gradeClassesConfig[currentGrade];
+            // 找出目前最大的 ID，然後 +1 (避免重複)
+            let newId = list.length > 0 ? Math.max(...list) + 1 : 1;
+            
+            list.push(newId);
+            saveGradeConfig(); // 儲存設定到雲端
+            
+            // 賦予預設名稱
+            let gClassNames = cloudData[`G${currentGrade}_meta_names`] ? JSON.parse(cloudData[`G${currentGrade}_meta_names`]) : {};
+            gClassNames[newId] = `${currentGrade}0${newId}`;
+            syncDataToCloud(`G${currentGrade}_meta_names`, gClassNames);
+
+            // 切換到新班級
+            switchClass(newId);
+        }
+
+        function deleteCurrentClass() {
+            let list = gradeClassesConfig[currentGrade];
+            if (list.length <= 1) {
+                alert("至少要保留一個班級！");
+                return;
+            }
+            
+            if (!confirm(`確定要刪除目前的班級 (ID: ${currentClassIndex}) 嗎？\n資料將會隱藏。`)) return;
+
+            // 從陣列中移除
+            gradeClassesConfig[currentGrade] = list.filter(id => id !== currentClassIndex);
+            saveGradeConfig();
+
+            // 切換到列表中的最後一個班級
+            let newList = gradeClassesConfig[currentGrade];
+            switchClass(newList[newList.length - 1]);
+        }
+
+        function saveGradeConfig() {
+            syncDataToCloud("GLOBAL_grade_config", gradeClassesConfig);
+            // 重新渲染分頁
+            renderClassTabs();
+        }
+
         // --- 資料載入 ---
         function loadClassData() {
             const metaKey = `G${currentGrade}_meta_names`;
-            classNames = cloudData[metaKey] ? JSON.parse(cloudData[metaKey]) : initClassNames(currentGrade);
+            classNames = cloudData[metaKey] ? JSON.parse(cloudData[metaKey]) : {};
+            
+            // 確保有預設名稱
+            if (!classNames[currentClassIndex]) {
+                classNames[currentClassIndex] = `${currentGrade}0${currentClassIndex}`;
+            }
 
             document.getElementById('classNameInput').value = classNames[currentClassIndex];
             renderClassTabs();
@@ -276,7 +320,12 @@
 
         function switchGrade(grade) {
             currentGrade = grade;
-            currentClassIndex = 1;
+            // 切換年級時，預設選該年級的第一個班
+            let list = gradeClassesConfig[grade];
+            if (!list || list.length === 0) list = [1]; // 防呆
+            
+            currentClassIndex = list[0];
+            
             document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`grade-btn-${grade}`).classList.add('active');
             loadClassData();
@@ -290,19 +339,19 @@
         function renderClassTabs() {
             const container = document.getElementById('tabContainer');
             container.innerHTML = '';
-            for(let i=1; i<=CLASSES_PER_GRADE; i++) {
+            
+            // 根據設定檔渲染 Tab
+            let list = gradeClassesConfig[currentGrade] || [];
+            
+            list.forEach(id => {
                 const btn = document.createElement('button');
-                btn.className = `tab-btn ${i === currentClassIndex ? 'active' : ''}`;
-                btn.innerText = classNames[i];
-                btn.onclick = () => switchClass(i);
+                btn.className = `tab-btn ${id === currentClassIndex ? 'active' : ''}`;
+                // 顯示名稱或預設代號
+                let displayName = (classNames && classNames[id]) ? classNames[id] : `${currentGrade}0${id}`;
+                btn.innerText = displayName;
+                btn.onclick = () => switchClass(id);
                 container.appendChild(btn);
-            }
-        }
-
-        function initClassNames(grade) {
-            let names = {};
-            for(let i=1; i<=CLASSES_PER_GRADE; i++) names[i] = `${grade}0${i}`; 
-            return names;
+            });
         }
 
         function initializeStudentData() {
@@ -440,7 +489,6 @@
                 card.className = 'student-card';
                 card.setAttribute('data-id', student.id); 
                 
-                // --- 新版卡片 HTML (移除座號，成績左右排列) ---
                 card.innerHTML = `
                     <div class="move-handle"></div>
                     
@@ -508,7 +556,6 @@
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    // 調整壓縮尺寸，因為圖片變大了
                     const maxWidth = 100; const maxHeight = 100;
                     let width = img.width; let height = img.height;
                     let sx = 0, sy = 0, sSize = Math.min(width, height);
@@ -574,27 +621,36 @@
         function exportToExcel() {
             var wb = XLSX.utils.book_new();
             var hasData = false;
+            // 需要依據動態的 gradeClassesConfig 來匯出
             for(let g of GRADES) {
-                let gClassNames = cloudData[`G${g}_meta_names`] ? JSON.parse(cloudData[`G${g}_meta_names`]) : initClassNames(g);
-                for(let c=1; c<=CLASSES_PER_GRADE; c++) {
-                    const sData = cloudData[`G${g}_c${c}_students`] ? JSON.parse(cloudData[`G${g}_c${c}_students`]) : null;
-                    const gData = cloudData[`G${g}_c${c}_groups`] ? JSON.parse(cloudData[`G${g}_c${c}_groups`]) : null;
+                let gClassNames = cloudData[`G${g}_meta_names`] ? JSON.parse(cloudData[`G${g}_meta_names`]) : {};
+                let classList = gradeClassesConfig[g] || [];
+                
+                for(let cId of classList) {
+                    const sData = cloudData[`G${g}_c${cId}_students`] ? JSON.parse(cloudData[`G${g}_c${cId}_students`]) : null;
+                    const gData = cloudData[`G${g}_c${cId}_groups`] ? JSON.parse(cloudData[`G${g}_c${cId}_groups`]) : null;
+                    
                     if(!sData) continue;
+                    
                     let ws_data = [["組別", "姓名", "注音/暱稱", "總分", "備註", "小組作業1", "備註1", "小組作業2", "備註2"]];
                     let classHasData = false;
                     sData.forEach(s => {
                         if(s.name.trim() !== "" || s.score !== DEFAULT_SCORE) {
                             classHasData = true; hasData = true;
-                            let gInfo = gData[`g${s.group}`];
+                            let gInfo = gData ? gData[`g${s.group}`] : {hw1:"", hw2:""};
                             ws_data.push([
                                 s.group, s.name, s.zhuyin || "",
                                 s.score, s.memo, gInfo.hw1, gInfo.hw1_memo, gInfo.hw2, gInfo.hw2_memo
                             ]);
                         }
                     });
+                    
                     if(classHasData) {
                         var ws = XLSX.utils.aoa_to_sheet(ws_data);
-                        XLSX.utils.book_append_sheet(wb, ws, gClassNames[c]);
+                        // 使用自訂班級名稱，若無則用代號
+                        let sheetName = gClassNames[cId] || `${g}0${cId}`;
+                        // Excel 分頁名稱不能重複或非法，簡單處理
+                        XLSX.utils.book_append_sheet(wb, ws, sheetName);
                     }
                 }
             }
