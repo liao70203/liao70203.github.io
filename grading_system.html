@@ -507,9 +507,9 @@
                             onchange="updateStudentData(${index}, 'zhuyin', this.value)">
                     
                     <div class="score-control-row">
-                        <button class="btn-score btn-minus" onclick="adjustScore(${index}, -5)">-</button>
+                        <button class="btn-score btn-minus" onclick="adjustScore(${index}, -1)">-</button>
                         <div class="score-display ${scoreClass}">${score}</div>
-                        <button class="btn-score btn-plus" onclick="adjustScore(${index}, 5)">+</button>
+                        <button class="btn-score btn-plus" onclick="adjustScore(${index}, 1)">+</button>
                     </div>
 
                     <textarea class="seat-input-memo" placeholder="個人備註" onchange="updateStudentData(${index}, 'memo', this.value)">${student.memo}</textarea>
@@ -654,9 +654,10 @@
                     }
                 }
             }
-            if(hasData) XLSX.writeFile(wb, "全校成績總表(雲端版).xlsx");
+            if(hasData) XLSX.writeFile(wb, "全校成績總表.xlsx");
             else alert("目前沒有資料可匯出");
         }
     </script>
 </body>
 </html>
+
